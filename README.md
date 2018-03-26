@@ -1,3 +1,3 @@
 # Wikipedia-Article-Generation
 
-still working on the code !!!
+Coding an LSTM in tensorflow to generate wikipedia articles.
