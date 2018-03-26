@@ -184,4 +184,73 @@ with tf.Session(graph = graph) as sess:
 
     # for each training step
     for step in range(max_steps):
+        #for each training step
+    for step in range(max_steps):
         
+        #starts off as 0
+        offset = offset % len(X)
+        
+        #calculate batch data and labels to feed model iteratively
+        if offset <= (len(X) - batch_size):
+            #first part
+            batch_data = X[offset: offset + batch_size]
+            batch_labels = y[offset: offset + batch_size]
+            offset += batch_size
+        else:
+            #last part
+            to_add = batch_size - (len(X) - offset)
+            batch_data = np.concatenate((X[offset: len(X)], X[0: to_add]))
+            batch_labels = np.concatenate((y[offset: len(X)], y[0: to_add]))
+            offset = to_add
+        
+        #optimize
+        _, training_loss = sess.run([optimizer, loss], feed_dict={data: batch_data, labels: batch_labels})
+        
+        if step % 10 == 0:
+            print('training loss at step %d: %.2f (%s)' % (step, training_loss, datetime.datetime.now()))
+
+            if step % save_every == 0:
+                saver.save(sess, checkpoint_directory + '/model', global_step=step)
+                
+                
+test_start = 'I plan to make the world a better place '
+
+with tf.Session(graph=graph) as sess:
+    #init graph, load model
+    tf.global_variables_initializer().run()
+    model = tf.train.latest_checkpoint(checkpoint_directory)
+    saver = tf.train.Saver()
+    saver.restore(sess, model)
+
+    #set input variable to generate chars from
+    reset_test_state.run() 
+    test_generated = test_start
+
+    #for every char in the input sentennce
+    for i in range(len(test_start) - 1):
+        #initialize an empty char store
+        test_X = np.zeros((1, char_size))
+        #store it in id from
+        test_X[0, char2id[test_start[i]]] = 1.
+        #feed it to model, test_prediction is the output value
+        _ = sess.run(test_prediction, feed_dict={test_data: test_X})
+
+    
+    #where we store encoded char predictions
+    test_X = np.zeros((1, char_size))
+    test_X[0, char2id[test_start[-1]]] = 1.
+
+    #lets generate 500 characters
+    for i in range(500):
+        #get each prediction probability
+        prediction = test_prediction.eval({test_data: test_X})[0]
+        #one hot encode it
+        next_char_one_hot = sample(prediction)
+        #get the indices of the max values (highest probability)  and convert to char
+        next_char = id2char[np.argmax(next_char_one_hot)]
+        #add each char to the output text iteratively
+        test_generated += next_char
+        #update the 
+        test_X = next_char_one_hot.reshape((1, char_size))
+
+    print(test_generated)
